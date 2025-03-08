@@ -70,9 +70,24 @@ export class RestAPIStack extends cdk.Stack {
       }),
     });
 
+    const newMovieFn = new lambdanode.NodejsFunction(this, "AddMovieFn", {
+      architecture: lambda.Architecture.ARM_64,
+      runtime: lambda.Runtime.NODEJS_22_X,
+      entry: `${__dirname}/../lambdas/addMovie.ts`,
+      timeout: cdk.Duration.seconds(10),
+      memorySize: 128,
+      environment: {
+        TABLE_NAME: moviesTable.tableName,
+        REGION: "eu-west-1",
+      },
+    });
+
+    
+
     // Permissions 
     moviesTable.grantReadData(getMovieByIdFn)
     moviesTable.grantReadData(getAllMoviesFn)
+    moviesTable.grantReadWriteData(newMovieFn)
 
 
     // REST API 
@@ -95,12 +110,22 @@ export class RestAPIStack extends cdk.Stack {
       "GET",
       new apig.LambdaIntegration(getAllMoviesFn, { proxy: true })
     );
+    moviesEndpoint.addMethod(
+      "POST",
+      new apig.LambdaIntegration(newMovieFn, { proxy: true })
+    );
     // Detail movie endpoint
     const specificMovieEndpoint = moviesEndpoint.addResource("{movieId}");
     specificMovieEndpoint.addMethod(
       "GET",
       new apig.LambdaIntegration(getMovieByIdFn, { proxy: true })
     );
+
+
+  
+   
+
+
 
   }
 }
